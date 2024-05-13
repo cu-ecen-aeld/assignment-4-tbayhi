@@ -1,0 +1,6 @@
+
+config BR2_PACKAGE_LDD
+	bool "ldd"
+	help
+	  Includes the scull module and additional modules in misc-utils.
+	  Used to understand buildroot module generation and packaging.

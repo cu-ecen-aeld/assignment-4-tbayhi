@@ -1,0 +1,84 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        # load scull
+        if grep -q '^staff:' /etc/group; then
+            group="staff"
+        else
+            group="wheel"
+        fi
+
+        insmod /lib/modules/5.15.18/kernel/drivers/scull/scull.ko || exit 1
+
+        major=$(awk "\$2==\"scull\" {print \$1}" /proc/devices)
+
+        rm -f /dev/scull[0-3]
+        mknod /dev/scull0 c $major 0
+        mknod /dev/scull1 c $major 1
+        mknod /dev/scull2 c $major 2
+        mknod /dev/scull3 c $major 3
+        ln -sf /dev/scull0 /dev/scull
+        chgrp $group /dev/scull[0-3]
+        chmod 664 /dev/scull[0-3]
+
+        rm -f /dev/scullpipe[0-3]
+        mknod /dev/scullpipe0 c $major 4
+        mknod /dev/scullpipe1 c $major 5
+        mknod /dev/scullpipe2 c $major 6
+        mknod /dev/scullpipe3 c $major 7
+        ln -sf /dev/scullpipe0 /dev/scullpipe
+        chgrp $group /dev/scullpipe[0-3]
+        chmod 664 /dev/scullpipe[0-3]
+
+        rm -f /dev/scullsingle
+        mknod /dev/scullsingle c $major 8
+        chgrp $group /dev/scullsingle
+        chmod 664 /dev/scullsingle
+
+        rm -f /dev/sculluid
+        mknod /dev/sculluid c $major 9
+        chgrp $group /dev/sculluid
+        chmod 664 /dev/sculluid
+
+        rm -f /dev/scullwuid
+        mknod /dev/scullwuid c $major 10
+        chgrp $group /dev/scullwuid
+        chmod 664 /dev/scullwuid
+
+        rm -f /dev/scullpriv
+        mknod /dev/scullpriv c $major 11
+        chgrp $group /dev/scullpriv
+        chmod 664 /dev/scullpriv
+
+        # now load faulty
+        insmod /lib/modules/5.15.18/kernel/drivers/misc-modules/faulty.ko || exit 1
+        
+        major=$(awk "\$2==\"faulty\" {print \$1}" /proc/devices)
+
+        rm -f /dev/faulty
+        mknod /dev/faulty c $major 0
+        chgrp $group /dev/faulty
+        chmod 664 /dev/faulty
+
+        # and, finally, load hello
+        modprobe hello || exit 1
+        ;;
+    stop)
+        # unload hello, faulty, and scull
+        (rmmod hello && rmmod faulty && rmmod scull) || exit 1
+
+        rm -f /dev/faulty
+
+        rm -f /dev/scull /dev/scull[0-3]
+        rm -f /dev/scullpriv
+        rm -f /dev/scullpipe /dev/scullpipe[0-3]
+        rm -f /dev/scullsingle
+        rm -f /dev/sculluid
+        rm -f /dev/scullwuid
+        ;;
+    *)
+        exit 1
+esac
+
+exit 0
